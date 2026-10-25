@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="gu" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Portal - Chemical Engineering</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Font Awesome Icons CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="h-full bg-slate-100 font-sans text-slate-800 antialiased flex flex-col">
+
+  <!-- Toast Notification Box -->
+  <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- AUTH SCREEN (LOGIN REQUIRED) -->
+  <div id="auth-screen" class="fixed inset-0 bg-slate-900 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl text-center space-y-6">
+      <div class="w-16 h-16 rounded-2xl bg-sky-100 text-sky-600 flex items-center justify-center mx-auto text-2xl">
+        <i class="fa-solid fa-lock"></i>
+      </div>
+      <div>
+        <h2 class="text-xl font-bold text-slate-900">Admin Authentication</h2>
+        <p class="text-xs text-slate-500 mt-1">ફક્ત અધિકૃત એડમિન ઈમેલ આઈડી વડે સાઈન-ઇન કરો</p>
+      </div>
+
+      <div id="auth-error-msg" class="hidden text-xs text-rose-600 bg-rose-50 border border-rose-200 p-3 rounded-xl font-semibold"></div>
+
+      <button id="btn-login" onclick="loginWithGoogle()" class="w-full py-3 px-4 bg-slate-900 hover:bg-black text-white font-semibold rounded-xl text-sm transition flex items-center justify-center gap-3 shadow-md">
+        <i class="fa-brands fa-google text-rose-500"></i>
+        <span>Sign in with Google</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- MAIN WRAPPER (HIDDEN UNTIL AUTHENTICATED) -->
+  <div id="admin-app" class="hidden min-h-screen flex flex-col md:flex-row w-full">
+
+    <!-- SIDEBAR -->
+    <aside class="w-full md:w-64 bg-slate-900 text-white flex flex-col justify-between p-5 shrink-0 shadow-xl">
+      <div>
+        <div class="flex items-center gap-3 pb-6 border-b border-slate-800">
+          <div class="w-10 h-10 rounded-xl bg-sky-500/20 border border-sky-400/30 flex items-center justify-center text-sky-400">
+            <i class="fa-solid fa-user-shield text-lg"></i>
+          </div>
+          <div>
+            <h1 class="font-extrabold text-sm leading-tight text-white">Admin Panel</h1>
+            <p class="text-[10px] text-sky-400 font-semibold uppercase tracking-wider">Chemical Engineering</p>
+          </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <nav class="mt-6 space-y-1.5">
+          <button onclick="switchTab('tab-subjects')" id="nav-subjects" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-sky-600 text-white font-semibold text-sm transition">
+            <i class="fa-solid fa-book w-5"></i>
+            <span>Manage Subjects</span>
+          </button>
+          <button onclick="switchTab('tab-materials')" id="nav-materials" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white font-medium text-sm transition">
+            <i class="fa-solid fa-folder-tree w-5"></i>
+            <span>Upload Materials</span>
+          </button>
+          <button onclick="switchTab('tab-announcements')" id="nav-announcements" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white font-medium text-sm transition">
+            <i class="fa-solid fa-bullhorn w-5"></i>
+            <span>Announcements</span>
+          </button>
+          <button onclick="switchTab('tab-students')" id="nav-students" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white font-medium text-sm transition">
+            <i class="fa-solid fa-users w-5"></i>
+            <span>Registered Students</span>
+          </button>
+        </nav>
+      </div>
+
+      <div class="pt-6 border-t border-slate-800 space-y-3">
+        <div class="text-[11px] text-slate-400 truncate" id="admin-user-email"></div>
+        <button onclick="logoutAdmin()" class="w-full py-2 bg-slate-800 hover:bg-rose-900/40 text-rose-400 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-right-from-bracket"></i> Logout
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <main class="flex-1 flex flex-col min-h-screen overflow-y-auto">
+      
+      <header class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-20">
+        <div>
+          <h2 class="text-base font-bold text-slate-800" id="page-title">Manage Subjects (Semester-Wise)</h2>
+          <p class="text-xs text-slate-400">Semester ane Folder select kari ne material manage karo</p>
+        </div>
+      </header>
+
+      <div class="p-6 max-w-6xl w-full mx-auto space-y-6">
+
+        <!-- TAB 1: SUBJECTS MANAGEMENT -->
+        <section id="tab-subjects" class="space-y-6">
+          <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+            <h3 class="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+              <i class="fa-solid fa-plus-circle text-sky-600"></i> Navo Subject Add Karo (Semester Sathe)
+            </h3>
+            <form onsubmit="event.preventDefault(); handleAddSubject();" class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Select Semester *</label>
+                <select id="sub-sem" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                  <option value="" disabled selected>Semester પસંદ કરો</option>
+                  <option value="1st Semester">1st Semester</option>
+                  <option value="2nd Semester">2nd Semester</option>
+                  <option value="3rd Semester">3rd Semester</option>
+                  <option value="4th Semester">4th Semester</option>
+                  <option value="5th Semester">5th Semester</option>
+                  <option value="6th Semester">6th Semester</option>
+                  <option value="7th Semester">7th Semester</option>
+                  <option value="8th Semester">8th Semester</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Subject Name *</label>
+                <input type="text" id="sub-name" required placeholder="e.g. Fluid Mechanics" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Subject Code *</label>
+                <input type="text" id="sub-code" required placeholder="e.g. CH401" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none">
+              </div>
+              <div class="flex items-end">
+                <button type="submit" class="w-full py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl text-sm transition shadow-md shadow-sky-600/20">
+                  Add Subject
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <h3 class="text-base font-bold text-slate-800">Live Subjects List</h3>
+              <div class="flex items-center gap-2">
+                <label class="text-xs font-semibold text-slate-600">Filter Semester:</label>
+                <select id="filter-subject-sem" onchange="renderSubjectsList()" class="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold focus:outline-none">
+                  <option value="ALL">Badha Semester</option>
+                  <option value="1st Semester">1st Semester</option>
+                  <option value="2nd Semester">2nd Semester</option>
+                  <option value="3rd Semester">3rd Semester</option>
+                  <option value="4th Semester">4th Semester</option>
+                  <option value="5th Semester">5th Semester</option>
+                  <option value="6th Semester">6th Semester</option>
+                  <option value="7th Semester">7th Semester</option>
+                  <option value="8th Semester">8th Semester</option>
+                </select>
+              </div>
+            </div>
+
+            <div id="subjects-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <p class="text-xs text-slate-400 col-span-full">Koy subjects malya nathi.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 2: UPLOAD MATERIALS -->
+        <section id="tab-materials" class="hidden space-y-6">
+          <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+            <h3 class="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+              <i class="fa-solid fa-folder-plus text-sky-600"></i> Material Upload (Semester & Folder Wise)
+            </h3>
+            <form onsubmit="event.preventDefault(); handleAddMaterial();" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Select Semester *</label>
+                <select id="mat-sem" required onchange="filterMaterialSubjectsBySem()" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                  <option value="" disabled selected>Pehle Semester Select Karo</option>
+                  <option value="1st Semester">1st Semester</option>
+                  <option value="2nd Semester">2nd Semester</option>
+                  <option value="3rd Semester">3rd Semester</option>
+                  <option value="4th Semester">4th Semester</option>
+                  <option value="5th Semester">5th Semester</option>
+                  <option value="6th Semester">6th Semester</option>
+                  <option value="7th Semester">7th Semester</option>
+                  <option value="8th Semester">8th Semester</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Select Subject *</label>
+                <select id="mat-subject" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                  <option value="" disabled selected>Pehle Semester Pasand Karo</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Select Folder / Category *</label>
+                <select id="mat-folder-select" required onchange="toggleCustomFolderInput()" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                  <option value="Unit 1">📁 Unit 1</option>
+                  <option value="Unit 2">📁 Unit 2</option>
+                  <option value="Unit 3">📁 Unit 3</option>
+                  <option value="Unit 4">📁 Unit 4</option>
+                  <option value="Lab Manual">🔬 Lab Manual</option>
+                  <option value="Previous Year Papers (PYQ)">📝 Old Papers / PYQ</option>
+                  <option value="Reference Books">📚 Reference Books</option>
+                  <option value="Assignments">📑 Assignments</option>
+                  <option value="CUSTOM">+ Navu Folder Banavo</option>
+                </select>
+              </div>
+
+              <div id="custom-folder-container" class="hidden">
+                <label class="block text-xs font-semibold text-amber-600 mb-1">Folder Nu Naam Lakho *</label>
+                <input type="text" id="mat-folder-custom" placeholder="e.g. Unit 5 / Formula Sheet" class="w-full px-4 py-2.5 rounded-xl border border-amber-300 text-sm focus:ring-2 focus:ring-amber-500 focus:outline-none bg-amber-50/50">
+              </div>
+
+              <div class="sm:col-span-2 lg:col-span-2">
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Material Title *</label>
+                <input type="text" id="mat-title" required placeholder="e.g. Chapter 1 Notes (Handwritten)" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none">
+              </div>
+
+              <div class="sm:col-span-2 lg:col-span-4">
+                <label class="block text-xs font-semibold text-slate-600 mb-1">PDF / Drive Download Link *</label>
+                <input type="url" id="mat-url" required placeholder="https://drive.google.com/..." class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none">
+              </div>
+
+              <div class="sm:col-span-2 lg:col-span-4">
+                <button type="submit" class="w-full py-3 bg-slate-900 hover:bg-black text-white font-bold rounded-xl text-sm transition flex items-center justify-center gap-2">
+                  <i class="fa-solid fa-cloud-arrow-up"></i> Upload Material to Folder
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+            <h3 class="text-base font-bold text-slate-800">Uploaded Materials (Folder-Wise)</h3>
+            <div id="materials-list" class="space-y-4">
+              <p class="text-xs text-slate-400">Koy material haju upload thayel nathi.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 3: ANNOUNCEMENTS -->
+        <section id="tab-announcements" class="hidden space-y-6">
+          <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+            <h3 class="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
+              <i class="fa-solid fa-bullhorn text-sky-600"></i> Navi Notice Muko (Announcement)
+            </h3>
+            <form onsubmit="event.preventDefault(); handleAddAnnouncement();" class="space-y-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Announcement Title *</label>
+                <input type="text" id="ann-title" required placeholder="e.g. Mid Semester Exam Schedule" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Date *</label>
+                <input type="date" id="ann-date" required class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-sky-500 focus:outline-none">
+              </div>
+              <button type="submit" class="w-full py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl text-sm transition">
+                Publish Notice
+              </button>
+            </form>
+          </div>
+
+          <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+            <h3 class="text-base font-bold text-slate-800 mb-4">Live Notices</h3>
+            <div id="announcements-list" class="space-y-3">
+              <p class="text-xs text-slate-400">Koy jaherat mukeli nathi.</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 4: REGISTERED STUDENTS -->
+        <section id="tab-students" class="hidden space-y-6">
+          <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-base font-bold text-slate-800">Registered Students (Live)</h3>
+              <button onclick="loadStudents()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl flex items-center gap-1.5">
+                <i class="fa-solid fa-rotate-right"></i> Refresh
+              </button>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm">
+                <thead>
+                  <tr class="text-xs uppercase text-slate-400 font-semibold border-b border-slate-100">
+                    <th class="py-3 px-3">Name</th>
+                    <th class="py-3 px-3">Enrollment</th>
+                    <th class="py-3 px-3">Phone</th>
+                    <th class="py-3 px-3">College</th>
+                    <th class="py-3 px-3">Semester</th>
+                  </tr>
+                </thead>
+                <tbody id="students-table-body" class="divide-y border-slate-100">
+                  <tr>
+                    <td colspan="5" class="py-4 text-center text-xs text-slate-400">Loading...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- JAVASCRIPT & FIREBASE -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { 
+      getFirestore, 
+      collection, 
+      doc, 
+      addDoc, 
+      getDocs, 
+      deleteDoc, 
+      onSnapshot 
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { 
+      getAuth, 
+      GoogleAuthProvider, 
+      signInWithPopup, 
+      signOut, 
+      onAuthStateChanged 
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+    // ==============================================================
+    // ⚙️ 1. FIREBASE CONFIGURATION
+    // (અહીં તમારી Firebase Console > Project Settings માંથી વિગતો મુકો)
+    // ==============================================================
+   const firebaseConfig = {
+  apiKey: "AIzaSyD3tPpfRwxEKAPUGKvr0Md5vev-KRurwwc",
+  authDomain: "chem-eng-students-portal.firebaseapp.com",
+  projectId: "chem-eng-students-portal",
+  storageBucket: "chem-eng-students-portal.firebasestorage.app",
+  messagingSenderId: "378522193699",
+  appId: "1:378522193699:web:43ac49275038b4b2b98696",
+  measurementId: "G-DDQE1WDWYF"
+};
+
+    // 🔒 અધિકૃત એડમિન ઈમેલ આઈડી (લખો)
+    const ALLOWED_ADMIN_EMAILS = [
+      "vahorarehan@5510gmail.com",
+      "vahorarehan5510@gmail.com" // જો ટાઈપો હોય તો બંને માટે
+    ];
+
+    // Initialize Firebase
+    let db, auth;
+    try {
+      const app = initializeApp(firebaseConfig);
+      db = getFirestore(app);
+      auth = getAuth(app);
+      console.log("Firebase Connected Successfully!");
+    } catch (e) {
+      console.error("Firebase Initialization Error:", e);
+    }
+
+    let allLoadedSubjects = [];
+
+    // Toast Notification
+    window.showToast = function(msg, type = 'success') {
+      const c = document.getElementById('toast-container');
+      const t = document.createElement('div');
+      t.className = `${type === 'success' ? 'bg-emerald-600' : 'bg-rose-600'} text-white px-4 py-2.5 rounded-xl shadow-lg text-xs font-bold pointer-events-auto`;
+      t.textContent = msg;
+      c.appendChild(t);
+      setTimeout(() => t.remove(), 3000);
+    };
+
+    // Google Sign-In Handler
+    window.loginWithGoogle = async function() {
+      const provider = new GoogleAuthProvider();
+      const errBox = document.getElementById('auth-error-msg');
+      errBox.classList.add('hidden');
+
+      try {
+        const result = await signInWithPopup(auth, provider);
+        const userEmail = (result.user.email || '').toLowerCase().trim();
+
+        if (!ALLOWED_ADMIN_EMAILS.includes(userEmail)) {
+          await signOut(auth);
+          errBox.textContent = `Access Denied: ${userEmail} એડમિન તરીકે માન્ય નથી.`;
+          errBox.classList.remove('hidden');
+        }
+      } catch (err) {
+        errBox.textContent = err.message;
+        errBox.classList.remove('hidden');
+      }
+    };
+
+    // Logout
+    window.logoutAdmin = async function() {
+      await signOut(auth);
+      location.reload();
+    };
+
+    // Auth State Listener (ફક્ત આ ઈમેલ માટે જ પેનલ દેખાડશે)
+    onAuthStateChanged(auth, (user) => {
+      const authScreen = document.getElementById('auth-screen');
+      const adminApp = document.getElementById('admin-app');
+      const errBox = document.getElementById('auth-error-msg');
+
+      if (user && ALLOWED_ADMIN_EMAILS.includes((user.email || '').toLowerCase().trim())) {
+        authScreen.classList.add('hidden');
+        adminApp.classList.remove('hidden');
+        document.getElementById('admin-user-email').textContent = `Admin: ${user.email}`;
+        initDatabaseListeners();
+      } else {
+        authScreen.classList.remove('hidden');
+        adminApp.classList.add('hidden');
+      }
+    });
+
+    // Navigation Switcher
+    window.switchTab = function(tabId) {
+      const tabs = ['tab-subjects', 'tab-materials', 'tab-announcements', 'tab-students'];
+      tabs.forEach(id => {
+        document.getElementById(id).classList.add('hidden');
+        const nav = document.getElementById('nav-' + id.replace('tab-', ''));
+        if (nav) {
+          nav.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:bg-slate-800 hover:text-white font-medium text-sm transition";
+        }
+      });
+
+      document.getElementById(tabId).classList.remove('hidden');
+      const activeNav = document.getElementById('nav-' + tabId.replace('tab-', ''));
+      if (activeNav) {
+        activeNav.className = "w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-sky-600 text-white font-semibold text-sm transition";
+      }
+
+      if (tabId === 'tab-students') loadStudents();
+    };
+
+    window.toggleCustomFolderInput = function() {
+      const select = document.getElementById('mat-folder-select');
+      const customContainer = document.getElementById('custom-folder-container');
+      const customInput = document.getElementById('mat-folder-custom');
+
+      if (select.value === 'CUSTOM') {
+        customContainer.classList.remove('hidden');
+        customInput.required = true;
+        customInput.focus();
+      } else {
+        customContainer.classList.add('hidden');
+        customInput.required = false;
+      }
+    };
+
+    // 1. ADD SUBJECT
+    window.handleAddSubject = async function() {
+      const semester = document.getElementById('sub-sem').value;
+      const name = document.getElementById('sub-name').value.trim();
+      const code = document.getElementById('sub-code').value.trim();
+
+      if (!semester || !name || !code) return;
+
+      try {
+        await addDoc(collection(db, "portal_subjects"), {
+          semester,
+          name,
+          code,
+          createdAt: new Date().toISOString()
+        });
+        showToast(`${semester} ma subject add thai gayo!`);
+        document.getElementById('sub-name').value = '';
+        document.getElementById('sub-code').value = '';
+      } catch (e) {
+        showToast(e.message, 'error');
+      }
+    };
+
+    window.renderSubjectsList = function() {
+      const filter = document.getElementById('filter-subject-sem').value;
+      const list = document.getElementById('subjects-list');
+      list.innerHTML = '';
+
+      const filtered = filter === 'ALL' 
+        ? allLoadedSubjects 
+        : allLoadedSubjects.filter(s => s.semester === filter);
+
+      if (filtered.length === 0) {
+        list.innerHTML = '<p class="text-xs text-slate-400 col-span-full">Aa semester ma koy subject nathi.</p>';
+        return;
+      }
+
+      filtered.forEach(sub => {
+        const card = document.createElement('div');
+        card.className = "p-4 bg-slate-50 border border-slate-200 rounded-2xl flex items-center justify-between";
+        card.innerHTML = `
+          <div>
+            <span class="text-[10px] font-bold text-sky-700 bg-sky-100 px-2 py-0.5 rounded">${sub.semester}</span>
+            <h4 class="font-bold text-sm text-slate-800 mt-1">${sub.name}</h4>
+            <p class="text-xs font-mono text-slate-400">${sub.code}</p>
+          </div>
+          <button onclick="window.deleteItem('portal_subjects', '${sub.id}')" class="text-rose-500 hover:text-rose-700 text-xs p-1">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        `;
+        list.appendChild(card);
+      });
+    };
+
+    window.filterMaterialSubjectsBySem = function() {
+      const selectedSem = document.getElementById('mat-sem').value;
+      const sel = document.getElementById('mat-subject');
+      sel.innerHTML = '<option value="" disabled selected>Subject Pasand Karo</option>';
+
+      const matched = allLoadedSubjects.filter(s => s.semester === selectedSem);
+      if (matched.length === 0) {
+        sel.innerHTML = '<option value="" disabled>Aa Semester ma pehle Subject add karo</option>';
+        return;
+      }
+
+      matched.forEach(sub => {
+        const opt = document.createElement('option');
+        opt.value = sub.name;
+        opt.textContent = `${sub.name} (${sub.code})`;
+        sel.appendChild(opt);
+      });
+    };
+
+    // 2. ADD MATERIAL
+    window.handleAddMaterial = async function() {
+      const semester = document.getElementById('mat-sem').value;
+      const subject = document.getElementById('mat-subject').value;
+      const selectFolder = document.getElementById('mat-folder-select').value;
+      const customFolder = document.getElementById('mat-folder-custom').value.trim();
+      const title = document.getElementById('mat-title').value.trim();
+      const url = document.getElementById('mat-url').value.trim();
+
+      const folder = selectFolder === 'CUSTOM' ? (customFolder || 'General') : selectFolder;
+
+      if (!semester || !subject || !folder || !title || !url) {
+        showToast("Badhi details bhari do!", "error");
+        return;
+      }
+
+      try {
+        await addDoc(collection(db, "portal_materials"), {
+          semester,
+          subject,
+          folder,
+          title,
+          url,
+          uploadedAt: new Date().toISOString()
+        });
+        showToast(`Material [${folder}] folder ma upload thai gayu!`);
+        document.getElementById('mat-title').value = '';
+        document.getElementById('mat-url').value = '';
+        if (selectFolder === 'CUSTOM') {
+          document.getElementById('mat-folder-custom').value = '';
+        }
+      } catch (e) {
+        showToast(e.message, 'error');
+      }
+    };
+
+    // Delete Item
+    window.deleteItem = async function(colName, id) {
+      if (!confirm("Are you sure you want to delete this?")) return;
+      try {
+        await deleteDoc(doc(db, colName, id));
+        showToast("Delete thai gayu!");
+      } catch (e) {
+        showToast(e.message, 'error');
+      }
+    };
+
+    // 3. ADD ANNOUNCEMENT
+    window.handleAddAnnouncement = async function() {
+      const title = document.getElementById('ann-title').value.trim();
+      const date = document.getElementById('ann-date').value;
+
+      if (!title || !date) return;
+
+      try {
+        await addDoc(collection(db, "portal_announcements"), {
+          title,
+          date,
+          createdAt: new Date().toISOString()
+        });
+        showToast('Notice publish thai gayi!');
+        document.getElementById('ann-title').value = '';
+      } catch (e) {
+        showToast(e.message, 'error');
+      }
+    };
+
+    // 4. LOAD STUDENTS
+    window.loadStudents = async function() {
+      const tbody = document.getElementById('students-table-body');
+      tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-xs text-slate-400">Loading...</td></tr>`;
+
+      try {
+        const snap = await getDocs(collection(db, "students"));
+        if (snap.empty) {
+          tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-xs text-slate-400">Koy vidhyarthi register nathi.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = '';
+        snap.forEach(d => {
+          const s = d.data();
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td class="py-3 px-3 font-semibold text-slate-800">${s.fullName || '-'}</td>
+            <td class="py-3 px-3 font-mono text-xs text-slate-600">${s.enrollment || '-'}</td>
+            <td class="py-3 px-3 text-xs text-slate-600">${s.phone || '-'}</td>
+            <td class="py-3 px-3 text-xs text-slate-600">${s.college || '-'}</td>
+            <td class="py-3 px-3 text-xs font-semibold text-sky-600">${s.semester || '-'}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="5" class="py-4 text-center text-xs text-rose-500">${e.message}</td></tr>`;
+      }
+    };
+
+    // Database Listeners (After Login)
+    function initDatabaseListeners() {
+      onSnapshot(collection(db, "portal_subjects"), snap => {
+        allLoadedSubjects = [];
+        snap.forEach(d => {
+          allLoadedSubjects.push({ id: d.id, ...d.data() });
+        });
+        renderSubjectsList();
+      });
+
+      onSnapshot(collection(db, "portal_materials"), snap => {
+        const list = document.getElementById('materials-list');
+        list.innerHTML = '';
+
+        if (snap.empty) {
+          list.innerHTML = '<p class="text-xs text-slate-400">Koy material haju upload thayel nathi.</p>';
+          return;
+        }
+
+        const grouped = {};
+        snap.forEach(d => {
+          const m = { id: d.id, ...d.data() };
+          const semSub = `${m.semester} - ${m.subject}`;
+          const folder = m.folder || 'General';
+
+          if (!grouped[semSub]) grouped[semSub] = {};
+          if (!grouped[semSub][folder]) grouped[semSub][folder] = [];
+
+          grouped[semSub][folder].push(m);
+        });
+
+        for (const [subjectTitle, folders] of Object.entries(grouped)) {
+          const subContainer = document.createElement('div');
+          subContainer.className = "bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3";
+          
+          let folderHtml = '';
+          for (const [folderName, items] of Object.entries(folders)) {
+            folderHtml += `
+              <div class="bg-white border border-slate-200 rounded-xl p-3 shadow-xs">
+                <div class="flex items-center gap-2 mb-2 pb-1.5 border-b border-slate-100">
+                  <i class="fa-solid fa-folder-closed text-amber-500 text-sm"></i>
+                  <h5 class="text-xs font-bold text-slate-700">${folderName} <span class="text-[10px] font-normal text-slate-400">(${items.length} files)</span></h5>
+                </div>
+                <div class="space-y-2">
+                  ${items.map(m => `
+                    <div class="flex items-center justify-between pl-4 text-xs">
+                      <div class="flex items-center gap-2">
+                        <i class="fa-regular fa-file-pdf text-rose-500"></i>
+                        <span class="font-medium text-slate-800">${m.title}</span>
+                      </div>
+                      <div class="flex items-center gap-3">
+                        <a href="${m.url}" target="_blank" class="text-sky-600 hover:underline"><i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> Open</a>
+                        <button onclick="window.deleteItem('portal_materials', '${m.id}')" class="text-rose-500 hover:text-rose-700">
+                          <i class="fa-solid fa-trash text-[11px]"></i>
+                        </button>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            `;
+          }
+
+          subContainer.innerHTML = `
+            <div class="flex items-center gap-2 font-bold text-sm text-slate-900">
+              <span class="w-2 h-2 rounded-full bg-sky-500"></span>
+              ${subjectTitle}
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              ${folderHtml}
+            </div>
+          `;
+          list.appendChild(subContainer);
+        }
+      });
+
+      onSnapshot(collection(db, "portal_announcements"), snap => {
+        const list = document.getElementById('announcements-list');
+        list.innerHTML = '';
+        if (snap.empty) {
+          list.innerHTML = '<p class="text-xs text-slate-400">Koy notice mukeli nathi.</p>';
+          return;
+        }
+
+        snap.forEach(d => {
+          const a = d.data();
+          const item = document.createElement('div');
+          item.className = "p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between";
+          item.innerHTML = `
+            <div>
+              <h4 class="text-sm font-semibold text-slate-800">${a.title}</h4>
+              <p class="text-xs text-slate-400">${a.date}</p>
+            </div>
+            <button onclick="window.deleteItem('portal_announcements', '${d.id}')" class="text-rose-500 hover:text-rose-700 text-xs p-1">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          `;
+          list.appendChild(item);
+        });
+      });
+    }
+  </script>
+</body>
+</html>
